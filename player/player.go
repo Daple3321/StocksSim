@@ -1,0 +1,273 @@
+package player
+
+import (
+	"bufio"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path"
+	"slices"
+
+	"gameroll.com/StocksSim/stock"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
+)
+
+var (
+	purple    = lipgloss.Color("99")
+	gray      = lipgloss.Color("245")
+	lightGray = lipgloss.Color("241")
+
+	headerStyle  = lipgloss.NewStyle().Foreground(purple).Bold(true).Align(lipgloss.Center)
+	cellStyle    = lipgloss.NewStyle().Padding(0, 1).Width(14)
+	oddRowStyle  = cellStyle.Foreground(gray)
+	evenRowStyle = cellStyle.Foreground(lightGray)
+)
+
+const (
+	PLAYER_FILE_NAME string  = "Player.json"
+	STARTING_MONEY   float64 = 1000
+)
+
+type Player struct {
+	Usd    float64       `json:"usd"`
+	Stocks []stock.Stock `json:"stocks"`
+}
+
+func (p *Player) TryLoad() error {
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	playerPath := path.Join(wd, PLAYER_FILE_NAME)
+	_, pathErr := os.Stat(playerPath)
+	if pathErr != nil {
+		if os.IsNotExist(pathErr) {
+			p.Usd = STARTING_MONEY
+			return p.Save()
+		} else {
+			return pathErr
+		}
+	}
+
+	file, fileErr := os.Open(playerPath)
+	if fileErr != nil {
+		if errors.Is(fileErr, os.ErrNotExist) {
+			fmt.Printf("%s path does not exist.", playerPath)
+		}
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+	data := make([]byte, 0)
+	buf := make([]byte, 1024)
+	for {
+		n, err := reader.Read(buf)
+		data = append(data, buf[:n]...)
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				fmt.Println(err)
+				break
+			}
+		}
+	}
+
+	jsonErr := json.Unmarshal(data, &p)
+	if jsonErr != nil {
+		return jsonErr
+	}
+
+	return nil
+}
+
+func (p *Player) Save() error {
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	playerPath := path.Join(wd, PLAYER_FILE_NAME)
+
+	file, fileErr := os.Create(playerPath)
+	if fileErr != nil {
+		return fileErr
+	}
+	defer file.Close()
+
+	playerJson, jsonErr := json.Marshal(p)
+	if jsonErr != nil {
+		return jsonErr
+	}
+	file.Write(playerJson)
+
+	//fmt.Printf("Save path: %s\n", playerPath)
+
+	return nil
+}
+
+func InitPlayer() *Player {
+
+	p := Player{}
+
+	err := p.TryLoad()
+	if err != nil {
+		fmt.Printf("Error loading player: %s\n", err)
+	}
+
+	return &p
+}
+
+func (p *Player) BuyStock(ticker string, amount int) {
+
+	stockInfo, fetchErr := stock.FetchStockInfo(ticker)
+	if fetchErr != nil {
+		fmt.Printf("Error fetching stock info: %s\n", fetchErr)
+	}
+
+	finalPrice := stockInfo.Price * float64(amount)
+	if finalPrice > p.Usd {
+		fmt.Printf("Not enough money {$%f} to buy %d stocks for $%.2f\n", p.Usd, amount, finalPrice)
+		return
+	}
+
+	idx := slices.IndexFunc(p.Stocks, func(s stock.Stock) bool {
+		return s.Ticker == ticker
+	})
+
+	if idx != -1 {
+		p.Stocks[idx].Amount += amount
+		p.Stocks[idx].OriginalCost += finalPrice
+
+	} else {
+		newStock := stock.Stock{Ticker: ticker, Amount: amount, OriginalCost: finalPrice}
+		p.Stocks = append(p.Stocks, newStock)
+	}
+
+	p.Usd -= finalPrice
+	fmt.Printf("%d %s [%s] stocks BOUGHT for $%.2f\n", amount, stockInfo.Name, stockInfo.Ticker, finalPrice)
+}
+
+func (p *Player) SellStock(ticker string, amount int) {
+
+	idx := slices.IndexFunc(p.Stocks, func(s stock.Stock) bool {
+		return s.Ticker == ticker
+	})
+	if idx == -1 {
+		fmt.Printf("No %s ticker found in portfolio\n", ticker)
+		return
+	} else if p.Stocks[idx].Amount < amount {
+		fmt.Printf("Not enough stocks to sell\n")
+		return
+	}
+
+	stockInfo, fetchErr := stock.FetchStockInfo(ticker)
+	if fetchErr != nil {
+		fmt.Printf("Error fetching stock info: %s\n", fetchErr)
+	}
+
+	sellPrice := stockInfo.Price * float64(amount)
+	p.Stocks[idx].Amount -= amount
+	p.Stocks[idx].OriginalCost -= sellPrice
+
+	p.Usd += sellPrice
+	fmt.Printf("%d %s [%s] stocks SOLD for $%.2f\n", amount, stockInfo.Name, stockInfo.Ticker, sellPrice)
+}
+
+func (p *Player) GetPortfolioCurrentPrice() float64 {
+
+	if len(p.Stocks) <= 0 || p.Stocks == nil {
+		return 0
+	}
+
+	var sum float64
+	for _, s := range p.Stocks {
+
+		stockInfo, _ := stock.FetchStockInfo(s.Ticker)
+		sum += stockInfo.Price
+	}
+
+	return sum
+}
+
+func (p *Player) GetPortfolioCurrentPrice_Chan(priceChannel chan float64) {
+
+	if len(p.Stocks) <= 0 || p.Stocks == nil {
+		return
+	}
+
+	var sum float64
+	for _, s := range p.Stocks {
+
+		stockInfo, _ := stock.FetchStockInfo(s.Ticker)
+		sum += stockInfo.Price
+	}
+
+	priceChannel <- sum
+}
+
+func (p *Player) GetPortfolioGrowth() float64 {
+
+	if len(p.Stocks) <= 0 || p.Stocks == nil {
+		return 0
+	}
+
+	priceChannel := make(chan float64)
+	go p.GetPortfolioCurrentPrice_Chan(priceChannel)
+	currentPrice := <-priceChannel
+	growth := 0.0
+	//currentPrice := p.GetPortfolioCurrentPrice()
+
+	var oldPrice float64
+	for _, s := range p.Stocks {
+		oldPrice += s.OriginalCost
+	}
+	growth = (currentPrice / oldPrice) - 1
+
+	return growth
+}
+
+func (p *Player) GetPortfolioTable() *table.Table {
+
+	if len(p.Stocks) <= 0 || p.Stocks == nil {
+		return nil
+	}
+
+	//sb := strings.Builder{}
+
+	t := table.New().
+		Border(lipgloss.NormalBorder()).
+		BorderStyle(lipgloss.NewStyle().Foreground(purple)).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			switch {
+			case row == table.HeaderRow:
+				return headerStyle
+			case row%2 == 0:
+				return evenRowStyle
+			default:
+				return oddRowStyle
+			}
+		}).
+		Headers("Stock", "Amount", "Current price", "Growth (%)")
+
+	for _, s := range p.Stocks {
+
+		growth := s.GetStockGrowth()
+		if growth > 0 {
+			//sb.WriteString(fmt.Sprintf("[[%s] -- %d] +%.1f\n", s.Ticker, s.Amount, growth*100))
+			t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), "+"+fmt.Sprintf("%.2f", growth*100)+"%")
+		} else if growth <= 0 {
+			//sb.WriteString(fmt.Sprintf("[[%s] -- %d] %.1f\n", s.Ticker, s.Amount, growth*100))
+			t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), fmt.Sprintf("%.2f", growth*100)+"%")
+		}
+
+	}
+
+	return t
+}

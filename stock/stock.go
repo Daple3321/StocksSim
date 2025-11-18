@@ -1,0 +1,81 @@
+package stock
+
+import (
+	"bufio"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+)
+
+type Stock struct {
+	Ticker       string  `json:"ticker"`
+	Amount       int     `json:"amount"`
+	OriginalCost float64 `json:"originalCost"`
+}
+
+type StockInfo struct {
+	Ticker   string  `json:"ticker"`
+	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
+	Exchange string  `json:"exchange"`
+	Updated  int64   `json:"updated"`
+	Currency string  `json:"currency"`
+}
+
+func FetchStockInfo(ticker string) (*StockInfo, error) {
+
+	if ticker == "" {
+		return nil, errors.New("can't get stock. no ticker name provided")
+	}
+
+	client := &http.Client{}
+	apiRequest := fmt.Sprintf("https://api.api-ninjas.com/v1/stockprice?ticker=%s", ticker)
+	req, _ := http.NewRequest("GET", apiRequest, nil)
+	req.Header.Add("X-Api-Key", "QbfaZyiepTcbhfzV4RrP3Q==apwAxoQozLTEr6Uz")
+
+	resp, err := client.Do(req)
+	if err != nil {
+	}
+	defer resp.Body.Close()
+
+	//fmt.Printf("Response status: %s\n", resp.Status)
+	scanner := bufio.NewScanner(resp.Body)
+	sb := strings.Builder{}
+	for {
+		end := scanner.Scan()
+		if !end {
+			break
+		}
+
+		sb.Write([]byte(scanner.Text()))
+	}
+
+	var stock StockInfo
+	jsonErr := json.Unmarshal([]byte(sb.String()), &stock)
+	if jsonErr != nil {
+		return nil, jsonErr
+	}
+
+	return &stock, nil
+}
+
+func (s *Stock) GetStockGrowth() float64 {
+
+	var growth float64
+
+	stockInfo, fetchErr := FetchStockInfo(s.Ticker)
+	if fetchErr != nil {
+		fmt.Printf("Error fetching stock info: %s\n", fetchErr)
+	}
+
+	currentMarketValue := float64(s.Amount) * stockInfo.Price
+	//fmt.Printf("Current makert val: %f\n", currentMarketValue)
+
+	growth = (currentMarketValue / s.OriginalCost) - 1
+	//fmt.Printf("Growth: %f\n", growth)
+
+	return growth
+
+}
