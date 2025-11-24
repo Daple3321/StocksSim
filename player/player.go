@@ -11,19 +11,6 @@ import (
 	"slices"
 
 	"gameroll.com/StocksSim/stock"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
-)
-
-var (
-	purple    = lipgloss.Color("99")
-	gray      = lipgloss.Color("245")
-	lightGray = lipgloss.Color("241")
-
-	headerStyle  = lipgloss.NewStyle().Foreground(purple).Bold(true).Align(lipgloss.Center)
-	cellStyle    = lipgloss.NewStyle().Padding(0, 1).Width(14)
-	oddRowStyle  = cellStyle.Foreground(gray)
-	evenRowStyle = cellStyle.Foreground(lightGray)
 )
 
 const (
@@ -182,7 +169,7 @@ func (p *Player) SellStock(ticker string, amount int) {
 
 func (p *Player) GetPortfolioCurrentPrice() float64 {
 
-	if len(p.Stocks) <= 0 || p.Stocks == nil {
+	if !p.HasStocks() {
 		return 0
 	}
 
@@ -190,7 +177,7 @@ func (p *Player) GetPortfolioCurrentPrice() float64 {
 	for _, s := range p.Stocks {
 
 		stockInfo, _ := stock.FetchStockInfo(s.Ticker)
-		sum += stockInfo.Price
+		sum += stockInfo.Price * float64(s.Amount)
 	}
 
 	return sum
@@ -198,29 +185,33 @@ func (p *Player) GetPortfolioCurrentPrice() float64 {
 
 func (p *Player) GetPortfolioCurrentPrice_Chan(priceChannel chan float64) {
 
-	if len(p.Stocks) <= 0 || p.Stocks == nil {
+	if !p.HasStocks() {
 		return
 	}
 
 	var sum float64
+	fmt.Printf("Fetching stock info for all stocks\n")
 	for _, s := range p.Stocks {
 
 		stockInfo, _ := stock.FetchStockInfo(s.Ticker)
 		sum += stockInfo.Price
 	}
 
+	fmt.Printf("Value into channel.\n")
 	priceChannel <- sum
 }
 
 func (p *Player) GetPortfolioGrowth() float64 {
 
-	if len(p.Stocks) <= 0 || p.Stocks == nil {
+	if !p.HasStocks() {
 		return 0
 	}
 
 	priceChannel := make(chan float64)
+	fmt.Printf("Starting price channel\n")
 	go p.GetPortfolioCurrentPrice_Chan(priceChannel)
 	currentPrice := <-priceChannel
+	fmt.Printf("Got price from price channel --> %.2f\n", currentPrice)
 	growth := 0.0
 	//currentPrice := p.GetPortfolioCurrentPrice()
 
@@ -233,41 +224,11 @@ func (p *Player) GetPortfolioGrowth() float64 {
 	return growth
 }
 
-func (p *Player) GetPortfolioTable() *table.Table {
+func (p *Player) HasStocks() bool {
 
 	if len(p.Stocks) <= 0 || p.Stocks == nil {
-		return nil
+		return false
 	}
 
-	//sb := strings.Builder{}
-
-	t := table.New().
-		Border(lipgloss.NormalBorder()).
-		BorderStyle(lipgloss.NewStyle().Foreground(purple)).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			switch {
-			case row == table.HeaderRow:
-				return headerStyle
-			case row%2 == 0:
-				return evenRowStyle
-			default:
-				return oddRowStyle
-			}
-		}).
-		Headers("Stock", "Amount", "Current price", "Growth (%)")
-
-	for _, s := range p.Stocks {
-
-		growth := s.GetStockGrowth()
-		if growth > 0 {
-			//sb.WriteString(fmt.Sprintf("[[%s] -- %d] +%.1f\n", s.Ticker, s.Amount, growth*100))
-			t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), "+"+fmt.Sprintf("%.2f", growth*100)+"%")
-		} else if growth <= 0 {
-			//sb.WriteString(fmt.Sprintf("[[%s] -- %d] %.1f\n", s.Ticker, s.Amount, growth*100))
-			t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), fmt.Sprintf("%.2f", growth*100)+"%")
-		}
-
-	}
-
-	return t
+	return true
 }

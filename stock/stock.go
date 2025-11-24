@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -32,8 +33,14 @@ func FetchStockInfo(ticker string) (*StockInfo, error) {
 
 	client := &http.Client{}
 	apiRequest := fmt.Sprintf("https://api.api-ninjas.com/v1/stockprice?ticker=%s", ticker)
+
+	apiKey := os.Getenv("ApiNinjas_API_KEY")
+	if apiKey == "" {
+		return nil, errors.New("ApiNinjas_API_KEY is missing in environment variables")
+	}
+
 	req, _ := http.NewRequest("GET", apiRequest, nil)
-	req.Header.Add("X-Api-Key", "QbfaZyiepTcbhfzV4RrP3Q==apwAxoQozLTEr6Uz")
+	req.Header.Add("X-Api-Key", apiKey)
 
 	resp, err := client.Do(req)
 	if err != nil {
