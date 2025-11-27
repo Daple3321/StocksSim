@@ -5,7 +5,6 @@ import (
 
 	"time"
 
-	"gameroll.com/StocksSim/stock"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +19,7 @@ var checkCmd = &cobra.Command{
 			return
 		}
 
-		stockInfo, err := stock.FetchStockInfo(args[0])
+		stockInfo, err := p.Fetcher.Fetch(args[0])
 		if err != nil {
 			fmt.Printf(errorStyle.Render("Error fetching stock info: %s\n"), err)
 		}

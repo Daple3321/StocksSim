@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"sync"
 
+	"gameroll.com/StocksSim/stock"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
@@ -42,20 +44,34 @@ func GetPortfolioTable() *table.Table {
 		}).
 		Headers("Stock", "Amount", "Current price", "Growth (%)")
 
-	for _, s := range p.Stocks {
+	var wg sync.WaitGroup
 
-		growth := s.GetStockGrowth()
-		if growth > 0 {
-			t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), "+"+fmt.Sprintf("%.2f", growth*100)+"%")
+	for i, s := range p.Stocks {
 
-		} else if growth <= 0 {
-
-			t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), fmt.Sprintf("%.2f", growth*100)+"%")
-		}
-
+		wg.Go(func() {
+			GetTableRow(t, &s, i)
+		})
 	}
 
+	wg.Wait()
+
 	return t
+}
+
+func GetTableRow(t *table.Table, s *stock.Stock, id int) {
+
+	fmt.Printf("Worker %d starting\n", id)
+
+	growth := s.GetStockGrowth()
+	if growth > 0 {
+		t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), "+"+fmt.Sprintf("%.2f", growth*100)+"%")
+
+	} else if growth <= 0 {
+
+		t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), fmt.Sprintf("%.2f", growth*100)+"%")
+	}
+
+	fmt.Printf("Worker %d DONE\n", id)
 }
 
 var profileCmd = &cobra.Command{

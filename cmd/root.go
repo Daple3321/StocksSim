@@ -31,7 +31,7 @@ var errorStyle = lipgloss.NewStyle().
 var rootCmd = &cobra.Command{
 	Use:   "StocksSim",
 	Short: "Simulates investing in stocks & crypto",
-	Long:  `123`,
+	Long:  `...`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },

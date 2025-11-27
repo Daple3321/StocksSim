@@ -21,6 +21,8 @@ const (
 type Player struct {
 	Usd    float64       `json:"usd"`
 	Stocks []stock.Stock `json:"stocks"`
+
+	Fetcher StockFetcher `json:"-"`
 }
 
 func (p *Player) TryLoad() error {
@@ -73,6 +75,7 @@ func (p *Player) TryLoad() error {
 	return nil
 }
 
+// Executed everytime after commands are executed (in root.go)
 func (p *Player) Save() error {
 
 	wd, err := os.Getwd()
@@ -101,7 +104,9 @@ func (p *Player) Save() error {
 
 func InitPlayer() *Player {
 
-	p := Player{}
+	p := Player{
+		Fetcher: &DefaultStockFetcher{},
+	}
 
 	err := p.TryLoad()
 	if err != nil {
@@ -113,7 +118,7 @@ func InitPlayer() *Player {
 
 func (p *Player) BuyStock(ticker string, amount int) {
 
-	stockInfo, fetchErr := stock.FetchStockInfo(ticker)
+	stockInfo, fetchErr := p.Fetcher.Fetch(ticker)
 	if fetchErr != nil {
 		fmt.Printf("Error fetching stock info: %s\n", fetchErr)
 	}
@@ -154,7 +159,7 @@ func (p *Player) SellStock(ticker string, amount int) {
 		return
 	}
 
-	stockInfo, fetchErr := stock.FetchStockInfo(ticker)
+	stockInfo, fetchErr := p.Fetcher.Fetch(ticker)
 	if fetchErr != nil {
 		fmt.Printf("Error fetching stock info: %s\n", fetchErr)
 	}
@@ -176,30 +181,30 @@ func (p *Player) GetPortfolioCurrentPrice() float64 {
 	var sum float64
 	for _, s := range p.Stocks {
 
-		stockInfo, _ := stock.FetchStockInfo(s.Ticker)
+		stockInfo, _ := p.Fetcher.Fetch(s.Ticker)
 		sum += stockInfo.Price * float64(s.Amount)
 	}
 
 	return sum
 }
 
-func (p *Player) GetPortfolioCurrentPrice_Chan(priceChannel chan float64) {
+// func (p *Player) GetPortfolioCurrentPrice_Chan(priceChannel chan float64) {
 
-	if !p.HasStocks() {
-		return
-	}
+// 	if !p.HasStocks() {
+// 		return
+// 	}
 
-	var sum float64
-	fmt.Printf("Fetching stock info for all stocks\n")
-	for _, s := range p.Stocks {
+// 	var sum float64
+// 	fmt.Printf("Fetching stock info for all stocks\n")
+// 	for _, s := range p.Stocks {
 
-		stockInfo, _ := stock.FetchStockInfo(s.Ticker)
-		sum += stockInfo.Price
-	}
+// 		stockInfo, _ := p.Fetcher.Fetch(s.Ticker)
+// 		sum += stockInfo.Price
+// 	}
 
-	fmt.Printf("Value into channel.\n")
-	priceChannel <- sum
-}
+// 	fmt.Printf("Value into channel.\n")
+// 	priceChannel <- sum
+// }
 
 func (p *Player) GetPortfolioGrowth() float64 {
 
@@ -207,13 +212,13 @@ func (p *Player) GetPortfolioGrowth() float64 {
 		return 0
 	}
 
-	priceChannel := make(chan float64)
-	fmt.Printf("Starting price channel\n")
-	go p.GetPortfolioCurrentPrice_Chan(priceChannel)
-	currentPrice := <-priceChannel
-	fmt.Printf("Got price from price channel --> %.2f\n", currentPrice)
+	//priceChannel := make(chan float64)
+	//fmt.Printf("Starting price channel\n")
+	//go p.GetPortfolioCurrentPrice_Chan(priceChannel)
+	//currentPrice := <-priceChannel
+	//fmt.Printf("Got price from price channel --> %.2f\n", currentPrice)
 	growth := 0.0
-	//currentPrice := p.GetPortfolioCurrentPrice()
+	currentPrice := p.GetPortfolioCurrentPrice()
 
 	var oldPrice float64
 	for _, s := range p.Stocks {

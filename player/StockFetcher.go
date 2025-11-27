@@ -1,4 +1,4 @@
-package stock
+package player
 
 import (
 	"bufio"
@@ -8,24 +8,17 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"gameroll.com/StocksSim/stock"
 )
 
-type Stock struct {
-	Ticker       string  `json:"ticker"`
-	Amount       int     `json:"amount"`
-	OriginalCost float64 `json:"originalCost"`
+type StockFetcher interface {
+	Fetch(ticker string) (*stock.StockInfo, error)
 }
 
-type StockInfo struct {
-	Ticker   string  `json:"ticker"`
-	Name     string  `json:"name"`
-	Price    float64 `json:"price"`
-	Exchange string  `json:"exchange"`
-	Updated  int64   `json:"updated"`
-	Currency string  `json:"currency"`
-}
+type DefaultStockFetcher struct{}
 
-func FetchStockInfo(ticker string) (*StockInfo, error) {
+func (d *DefaultStockFetcher) Fetch(ticker string) (*stock.StockInfo, error) {
 
 	if ticker == "" {
 		return nil, errors.New("can't get stock. no ticker name provided")
@@ -59,31 +52,11 @@ func FetchStockInfo(ticker string) (*StockInfo, error) {
 		sb.Write([]byte(scanner.Text()))
 	}
 
-	var stock StockInfo
+	var stock stock.StockInfo
 	jsonErr := json.Unmarshal([]byte(sb.String()), &stock)
 	if jsonErr != nil {
 		return nil, jsonErr
 	}
 
 	return &stock, nil
-}
-
-// отвратительно.
-func (s *Stock) GetStockGrowth() float64 {
-
-	var growth float64
-
-	stockInfo, fetchErr := FetchStockInfo(s.Ticker)
-	if fetchErr != nil {
-		fmt.Printf("Error fetching stock info: %s\n", fetchErr)
-	}
-
-	currentMarketValue := float64(s.Amount) * stockInfo.Price
-	//fmt.Printf("Current makert val: %f\n", currentMarketValue)
-
-	growth = (currentMarketValue / s.OriginalCost) - 1
-	//fmt.Printf("Growth: %f\n", growth)
-
-	return growth
-
 }
