@@ -24,3 +24,5 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/sys v0.30.0 // indirect
 )
+
+replace gameroll.com/StocksSim => github.com/Daple3321/StocksSim v0.1.2
