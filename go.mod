@@ -25,4 +25,4 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 )
 
-replace gameroll.com/StocksSim => github.com/Daple3321/StocksSim v0.1.2
+//replace gameroll.com/StocksSim => github.com/Daple3321/StocksSim v0.1.2
