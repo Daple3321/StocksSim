@@ -24,6 +24,20 @@ type Player struct {
 	Fetcher StockFetcher `json:"-"`
 }
 
+func NewPlayer() *Player {
+
+	p := Player{
+		Fetcher: &DefaultStockFetcher{},
+	}
+
+	err := p.TryLoad()
+	if err != nil {
+		fmt.Printf("Error loading player: %s\n", err)
+	}
+
+	return &p
+}
+
 func (p *Player) TryLoad() error {
 
 	wd, err := os.Getwd()
@@ -78,20 +92,6 @@ func (p *Player) Save() error {
 	//fmt.Printf("Save path: %s\n", playerPath)
 
 	return nil
-}
-
-func InitPlayer() *Player {
-
-	p := Player{
-		Fetcher: &DefaultStockFetcher{},
-	}
-
-	err := p.TryLoad()
-	if err != nil {
-		fmt.Printf("Error loading player: %s\n", err)
-	}
-
-	return &p
 }
 
 func (p *Player) BuyStock(ticker string, amount int) {

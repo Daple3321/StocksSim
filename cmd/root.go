@@ -48,7 +48,7 @@ var p player.Player
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 
-	p = *player.InitPlayer()
+	p = *player.NewPlayer()
 
 	err := rootCmd.Execute()
 	p.Save()

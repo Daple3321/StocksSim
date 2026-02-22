@@ -3,8 +3,13 @@ package utils
 import (
 	"bufio"
 	"io"
+	"math/rand/v2"
 	"os"
 )
+
+func RandFloat(min float64, max float64) float64 {
+	return min + rand.Float64()*(max-min)
+}
 
 // Reads all contents of the file using bufio reader
 func ReadFromFile(file *os.File) ([]byte, error) {

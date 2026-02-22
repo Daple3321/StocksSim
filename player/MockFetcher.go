@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gameroll.com/StocksSim/stock"
+	"gameroll.com/StocksSim/utils"
 )
 
 type MockFetcher struct{}
@@ -18,7 +19,7 @@ func (m *MockFetcher) Fetch(ticker string) (*stock.StockInfo, error) {
 		stockChannel <- &stock.StockInfo{
 			Ticker: ticker,
 			Name:   "MockName",
-			Price:  50.0,
+			Price:  utils.RandFloat(1, 250),
 		}
 	}()
 
