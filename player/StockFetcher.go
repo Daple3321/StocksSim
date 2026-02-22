@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"gameroll.com/StocksSim/stock"
+	"github.com/Daple3321/StocksSim/stock"
 )
 
 type StockFetcher interface {

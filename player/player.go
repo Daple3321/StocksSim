@@ -8,8 +8,8 @@ import (
 	"path"
 	"slices"
 
-	"gameroll.com/StocksSim/stock"
-	"gameroll.com/StocksSim/utils"
+	"github.com/Daple3321/StocksSim/stock"
+	"github.com/Daple3321/StocksSim/utils"
 )
 
 const (

@@ -6,7 +6,7 @@ package cmd
 import (
 	"os"
 
-	"gameroll.com/StocksSim/player"
+	"github.com/Daple3321/StocksSim/player"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )

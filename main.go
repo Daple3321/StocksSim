@@ -6,7 +6,7 @@ package main
 import (
 	"log"
 
-	"gameroll.com/StocksSim/cmd"
+	"github.com/Daple3321/StocksSim/cmd"
 	"github.com/joho/godotenv"
 )
 

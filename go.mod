@@ -1,4 +1,4 @@
-module gameroll.com/StocksSim
+module github.com/Daple3321/StocksSim
 
 go 1.25.3
 

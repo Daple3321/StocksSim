@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"gameroll.com/StocksSim/stock"
+	"github.com/Daple3321/StocksSim/stock"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
