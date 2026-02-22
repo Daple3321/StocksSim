@@ -1,13 +1,12 @@
 package stock
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
 type Stock struct {
@@ -23,6 +22,10 @@ type StockInfo struct {
 	Exchange string  `json:"exchange"`
 	Updated  int64   `json:"updated"`
 	Currency string  `json:"currency"`
+}
+
+func (s StockInfo) String() string {
+	return fmt.Sprintf("%s %f", s.Ticker, s.Price)
 }
 
 func FetchStockInfo(ticker string) (*StockInfo, error) {
@@ -47,20 +50,13 @@ func FetchStockInfo(ticker string) (*StockInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	//fmt.Printf("Response status: %s\n", resp.Status)
-	scanner := bufio.NewScanner(resp.Body)
-	sb := strings.Builder{}
-	for {
-		end := scanner.Scan()
-		if !end {
-			break
-		}
-
-		sb.Write([]byte(scanner.Text()))
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
 	}
 
 	var stock StockInfo
-	jsonErr := json.Unmarshal([]byte(sb.String()), &stock)
+	jsonErr := json.Unmarshal(body, &stock)
 	if jsonErr != nil {
 		return nil, jsonErr
 	}
@@ -68,7 +64,6 @@ func FetchStockInfo(ticker string) (*StockInfo, error) {
 	return &stock, nil
 }
 
-// отвратительно.
 func (s *Stock) GetStockGrowth() float64 {
 
 	var growth float64

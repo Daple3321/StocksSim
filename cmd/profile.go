@@ -21,13 +21,48 @@ var (
 	evenRowStyle = cellStyle.Foreground(lightGray)
 )
 
-func GetPortfolioTable() *table.Table {
-
+// Fetches current price info for all stocks in parallel
+func fetchPortfolioInfos() []*stock.StockInfo {
 	if !p.HasStocks() {
 		return nil
 	}
+	infos := make([]*stock.StockInfo, len(p.Stocks))
+	var wg sync.WaitGroup
+	for i := range p.Stocks {
+		i := i
+		ticker := p.Stocks[i].Ticker
+		wg.Go(func() {
+			infos[i], _ = p.Fetcher.Fetch(ticker)
+		})
+	}
+	wg.Wait()
+	return infos
+}
 
-	//sb := strings.Builder{}
+// Computes portfolio growth and current price from pre-fetched infos
+func getPortfolioStatsFromInfos(infos []*stock.StockInfo) (growth float64, currentPrice float64) {
+	if len(infos) != len(p.Stocks) {
+		return 0, 0
+	}
+	var sum float64
+	var oldCost float64
+	for i := range p.Stocks {
+		oldCost += p.Stocks[i].OriginalCost
+		if infos[i] != nil {
+			sum += infos[i].Price * float64(p.Stocks[i].Amount)
+		}
+	}
+	if oldCost == 0 {
+		return 0, sum
+	}
+	return (sum / oldCost) - 1, sum
+}
+
+func GetPortfolioTable(infos []*stock.StockInfo) *table.Table {
+
+	if !p.HasStocks() || len(infos) != len(p.Stocks) {
+		return nil
+	}
 
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
@@ -44,34 +79,25 @@ func GetPortfolioTable() *table.Table {
 		}).
 		Headers("Stock", "Amount", "Current price", "Growth (%)")
 
-	var wg sync.WaitGroup
-
-	for i, s := range p.Stocks {
-
-		wg.Go(func() {
-			GetTableRow(t, &s, i)
-		})
+	// Build rows
+	for i := range p.Stocks {
+		s := &p.Stocks[i]
+		info := infos[i]
+		if info == nil {
+			t.Row(s.Ticker, fmt.Sprint(s.Amount), "—", "—")
+			continue
+		}
+		currentVal := info.Price * float64(s.Amount)
+		growth := (currentVal / s.OriginalCost) - 1
+		currentPriceStr := "$" + fmt.Sprintf("%.2f", info.Price*float64(s.Amount))
+		growthStr := fmt.Sprintf("%.2f", growth*100) + "%"
+		if growth > 0 {
+			growthStr = "+" + growthStr
+		}
+		t.Row(s.Ticker, fmt.Sprint(s.Amount), currentPriceStr, growthStr)
 	}
-
-	wg.Wait()
 
 	return t
-}
-
-func GetTableRow(t *table.Table, s *stock.Stock, id int) {
-
-	fmt.Printf("Worker %d starting\n", id)
-
-	growth := s.GetStockGrowth()
-	if growth > 0 {
-		t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), "+"+fmt.Sprintf("%.2f", growth*100)+"%")
-
-	} else if growth <= 0 {
-
-		t.Row(s.Ticker, fmt.Sprint(s.Amount), "$"+fmt.Sprintf("%.2f", s.OriginalCost+(s.OriginalCost*growth)), fmt.Sprintf("%.2f", growth*100)+"%")
-	}
-
-	fmt.Printf("Worker %d DONE\n", id)
 }
 
 var profileCmd = &cobra.Command{
@@ -81,16 +107,22 @@ var profileCmd = &cobra.Command{
 	Aliases: []string{"p", "pf"},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		fmt.Printf(okStyle.Render("You have $%.2f USD\n"), p.Usd)
-		portfolioGrowth := p.GetPortfolioGrowth()
-		if portfolioGrowth > 0 {
-			fmt.Printf(okStyle.Render("You have $%.2f in stocks [+%.2f]\n"), p.GetPortfolioCurrentPrice(), portfolioGrowth)
-		} else {
-			fmt.Printf(okStyle.Render("You have $%.2f in stocks [%.2f]\n"), p.GetPortfolioCurrentPrice(), portfolioGrowth)
-		}
-		fmt.Print(("Portfolio\n"))
-		fmt.Println(GetPortfolioTable())
+		fmt.Println(okStyle.Render(fmt.Sprintf("You have $%.2f USD", p.Usd)))
 
+		if !p.HasStocks() {
+			fmt.Println(warningStyle.Render("Currently you have no stocks."))
+			return
+		}
+
+		infos := fetchPortfolioInfos()
+		portfolioGrowth, currentPrice := getPortfolioStatsFromInfos(infos)
+		if portfolioGrowth > 0 {
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have $%.2f in stocks [+%.2f]", currentPrice, portfolioGrowth)))
+		} else if portfolioGrowth < 0 {
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have $%.2f in stocks %.2f", currentPrice, portfolioGrowth)))
+		}
+
+		fmt.Println(GetPortfolioTable(infos))
 	},
 }
 

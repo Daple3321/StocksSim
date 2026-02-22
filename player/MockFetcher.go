@@ -13,12 +13,12 @@ func (m *MockFetcher) Fetch(ticker string) (*stock.StockInfo, error) {
 	stockChannel := make(chan *stock.StockInfo)
 
 	go func() {
-		time.Sleep(8000)
+		time.Sleep(450 * time.Millisecond)
 
 		stockChannel <- &stock.StockInfo{
-			Ticker: "AAPL",
-			Name:   "Apple Inc",
-			Price:  150.0,
+			Ticker: ticker,
+			Name:   "MockName",
+			Price:  50.0,
 		}
 	}()
 

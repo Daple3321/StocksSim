@@ -18,9 +18,14 @@ var defaultStyle = lipgloss.NewStyle().
 	Inherit(mainStyle)
 
 var okStyle = lipgloss.NewStyle().
-	Bold(true).
 	Foreground(lipgloss.Color("120")).
-	Inherit(mainStyle)
+	AlignHorizontal(lipgloss.Left)
+	// Inherit(mainStyle)
+	// Bold(true).
+
+var warningStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("21")).
+	AlignHorizontal(lipgloss.Left)
 
 var errorStyle = lipgloss.NewStyle().
 	Bold(true).

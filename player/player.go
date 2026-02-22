@@ -1,16 +1,15 @@
 package player
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"slices"
 
 	"gameroll.com/StocksSim/stock"
+	"gameroll.com/StocksSim/utils"
 )
 
 const (
@@ -33,37 +32,16 @@ func (p *Player) TryLoad() error {
 	}
 
 	playerPath := path.Join(wd, PLAYER_FILE_NAME)
-	_, pathErr := os.Stat(playerPath)
-	if pathErr != nil {
-		if os.IsNotExist(pathErr) {
-			p.Usd = STARTING_MONEY
-			return p.Save()
-		} else {
-			return pathErr
-		}
+	if !utils.CheckFileExistence(playerPath) {
+		fmt.Printf("No save file found. Creating new one at: %s\n", playerPath)
+		p.Usd = STARTING_MONEY
+		return p.Save()
 	}
 
-	file, fileErr := os.Open(playerPath)
+	data, fileErr := os.ReadFile(playerPath)
 	if fileErr != nil {
 		if errors.Is(fileErr, os.ErrNotExist) {
 			fmt.Printf("%s path does not exist.", playerPath)
-		}
-	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
-	data := make([]byte, 0)
-	buf := make([]byte, 1024)
-	for {
-		n, err := reader.Read(buf)
-		data = append(data, buf[:n]...)
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				fmt.Println(err)
-				break
-			}
 		}
 	}
 
@@ -172,62 +150,43 @@ func (p *Player) SellStock(ticker string, amount int) {
 	fmt.Printf("%d %s [%s] stocks SOLD for $%.2f\n", amount, stockInfo.Name, stockInfo.Ticker, sellPrice)
 }
 
-func (p *Player) GetPortfolioCurrentPrice() float64 {
-
-	if !p.HasStocks() {
-		return 0
-	}
-
-	var sum float64
-	for _, s := range p.Stocks {
-
-		stockInfo, _ := p.Fetcher.Fetch(s.Ticker)
-		sum += stockInfo.Price * float64(s.Amount)
-	}
-
-	return sum
-}
-
-// func (p *Player) GetPortfolioCurrentPrice_Chan(priceChannel chan float64) {
+// func (p *Player) GetPortfolioCurrentPrice() float64 {
 
 // 	if !p.HasStocks() {
-// 		return
+// 		return 0
 // 	}
 
 // 	var sum float64
-// 	fmt.Printf("Fetching stock info for all stocks\n")
+// 	var wg sync.WaitGroup
+
 // 	for _, s := range p.Stocks {
-
-// 		stockInfo, _ := p.Fetcher.Fetch(s.Ticker)
-// 		sum += stockInfo.Price
+// 		wg.Go(func() {
+// 			stockInfo, _ := p.Fetcher.Fetch(s.Ticker)
+// 			sum += stockInfo.Price * float64(s.Amount)
+// 		})
 // 	}
+// 	wg.Wait()
 
-// 	fmt.Printf("Value into channel.\n")
-// 	priceChannel <- sum
+// 	return sum
 // }
 
-func (p *Player) GetPortfolioGrowth() float64 {
+// func (p *Player) GetPortfolioStats() (growth float64, currentPrice float64) {
 
-	if !p.HasStocks() {
-		return 0
-	}
+// 	if !p.HasStocks() {
+// 		return 0.0, 0.0
+// 	}
 
-	//priceChannel := make(chan float64)
-	//fmt.Printf("Starting price channel\n")
-	//go p.GetPortfolioCurrentPrice_Chan(priceChannel)
-	//currentPrice := <-priceChannel
-	//fmt.Printf("Got price from price channel --> %.2f\n", currentPrice)
-	growth := 0.0
-	currentPrice := p.GetPortfolioCurrentPrice()
+// 	growth = 0.0
+// 	currentPrice = p.GetPortfolioCurrentPrice()
 
-	var oldPrice float64
-	for _, s := range p.Stocks {
-		oldPrice += s.OriginalCost
-	}
-	growth = (currentPrice / oldPrice) - 1
+// 	var oldPrice float64
+// 	for _, s := range p.Stocks {
+// 		oldPrice += s.OriginalCost
+// 	}
+// 	growth = (currentPrice / oldPrice) - 1
 
-	return growth
-}
+// 	return growth, currentPrice
+// }
 
 func (p *Player) HasStocks() bool {
 
