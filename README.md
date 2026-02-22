@@ -47,8 +47,15 @@ StocksSim check "AAPL"
 
 ## Installation
 
-Install with ```go```:
+### Install with ```go```:
 
 ```powershell
-go install github.com/Daple3321/StocksSim@latest
+go install github.com/Daple3321/StocksSim
+```
+### Or install ```StocksSim.exe``` file from [Latest release](https://github.com/Daple3321/StocksSim/releases/latest)
+
+And run StocksSim via CMD like this:
+
+```powershell
+./StocksSim
 ```
