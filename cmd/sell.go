@@ -20,7 +20,7 @@ var sellCmd = &cobra.Command{
 
 		amount, _ := cmd.Flags().GetInt("amount")
 		if amount <= 0 {
-			fmt.Print(errorStyle.Render("Wrong buy amount\n"))
+			fmt.Print(errorStyle.Render("Wrong sell amount\n"))
 			return
 		}
 
@@ -30,6 +30,6 @@ var sellCmd = &cobra.Command{
 
 func init() {
 	sellCmd.Flags().StringP("ticker", "t", "", "Stock ticker")
-	sellCmd.Flags().IntP("amount", "n", 0, "Amount to buy")
+	sellCmd.Flags().IntP("amount", "n", 0, "Amount to sell")
 	rootCmd.AddCommand(sellCmd)
 }

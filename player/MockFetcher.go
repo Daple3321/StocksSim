@@ -17,9 +17,12 @@ func (m *MockFetcher) Fetch(ticker string) (*stock.StockInfo, error) {
 		time.Sleep(450 * time.Millisecond)
 
 		stockChannel <- &stock.StockInfo{
-			Ticker: ticker,
-			Name:   "MockName",
-			Price:  utils.RandFloat(1, 250),
+			Ticker:   ticker,
+			Name:     "MockName",
+			Price:    utils.RandFloat(1, 250),
+			Exchange: "NASDAQ",
+			Updated:  time.Now().Unix(),
+			Currency: "USD",
 		}
 	}()
 
