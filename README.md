@@ -2,7 +2,9 @@
 
 Simulates buying and selling stocks for real prices.
 
-It fetches prices from this API: <https://api-ninjas.com/api/stockprice>
+It fetches prices from this API: <https://api-ninjas.com/api/stockprice>.
+
+For currency conversions it uses: <https://www.exchangerate-api.com/>.
 
 > [!NOTE]
 > To run it you will need an ApiNinjas API key
@@ -45,13 +47,20 @@ StocksSim check "AAPL"
 
 <img width="464" height="208" alt="check_screenshot" src="https://github.com/user-attachments/assets/04111a45-2173-4225-a3b6-c3640c094b25" />
 
+### Change display currency
+
+```powershell
+StocksSim currency -c EUR
+```
+
 ## Installation
 
-### Install with ```go```:
+### Install with ```go```
 
 ```powershell
 go install github.com/Daple3321/StocksSim
 ```
+
 ### Or install ```StocksSim.exe``` file from [Latest release](https://github.com/Daple3321/StocksSim/releases/latest)
 
 And run StocksSim via CMD like this:
