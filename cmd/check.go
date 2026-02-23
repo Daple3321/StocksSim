@@ -39,13 +39,20 @@ var checkCmd = &cobra.Command{
 			return
 		}
 
+		// check if needs conversion
+		// convert to display currency
+		if p.DisplayCurrency != BaseCurrency {
+			usdPrice := stockInfo.Price
+			stockInfo.ConvertedPrice = p.Converter.Convert("USD", p.DisplayCurrency, usdPrice)
+		}
+
 		line := func(label, value string) string {
 			return checkLabelStyle.Render(label+":") + " " + checkValueStyle.Render(value)
 		}
 		t := time.Unix(stockInfo.Updated, 0)
 		title := checkTitleStyle.Render(fmt.Sprintf("%s [%s]", stockInfo.Name, stockInfo.Ticker))
 		content = title + "\n\n" +
-			line("Price", fmt.Sprintf("$%.2f", stockInfo.Price)) + "\n" +
+			line("Price", fmt.Sprintf("%.2f", stockInfo.ConvertedPrice)) + "\n" +
 			line("Exchange", stockInfo.Exchange) + "\n" +
 			line("Updated", t.String()) + "\n" +
 			line("Currency", stockInfo.Currency)

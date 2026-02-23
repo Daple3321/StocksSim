@@ -22,7 +22,7 @@ type DefaultStockFetcher struct {
 
 func (d *DefaultStockFetcher) getClient() *http.Client {
 	if d.client == nil {
-		d.client = &http.Client{Timeout: 4 * time.Second}
+		d.client = &http.Client{Timeout: 6 * time.Second}
 	}
 	return d.client
 }

@@ -16,12 +16,13 @@ type Stock struct {
 }
 
 type StockInfo struct {
-	Ticker   string  `json:"ticker"`
-	Name     string  `json:"name"`
-	Price    float64 `json:"price"`
-	Exchange string  `json:"exchange"`
-	Updated  int64   `json:"updated"`
-	Currency string  `json:"currency"`
+	Ticker         string  `json:"ticker"`
+	Name           string  `json:"name"`
+	Price          float64 `json:"price"`
+	ConvertedPrice float64
+	Exchange       string `json:"exchange"`
+	Updated        int64  `json:"updated"`
+	Currency       string `json:"currency"`
 }
 
 func (s StockInfo) String() string {
