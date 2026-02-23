@@ -22,10 +22,12 @@ var (
 )
 
 // Fetches current price info for all stocks in parallel
-func fetchPortfolioInfos() []*stock.StockInfo {
+func fetchPortfolioInfos(exchangeRate float64) []*stock.StockInfo {
+
 	if !p.HasStocks() {
 		return nil
 	}
+
 	infos := make([]*stock.StockInfo, len(p.Stocks))
 	var wg sync.WaitGroup
 	for i := range p.Stocks {
@@ -33,6 +35,9 @@ func fetchPortfolioInfos() []*stock.StockInfo {
 		ticker := p.Stocks[i].Ticker
 		wg.Go(func() {
 			infos[i], _ = p.Fetcher.Fetch(ticker)
+			if infos[i] != nil && exchangeRate != 0 {
+				infos[i].ConvertedPrice = infos[i].Price * exchangeRate
+			}
 		})
 	}
 	wg.Wait()
@@ -64,6 +69,8 @@ func GetPortfolioTable(infos []*stock.StockInfo) *table.Table {
 		return nil
 	}
 
+	priceHeader := fmt.Sprintf("Current price (%s)", p.DisplayCurrency)
+
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
 		BorderStyle(lipgloss.NewStyle().Foreground(purple)).
@@ -77,7 +84,7 @@ func GetPortfolioTable(infos []*stock.StockInfo) *table.Table {
 				return oddRowStyle
 			}
 		}).
-		Headers("Stock", "Amount", "Current price", "Growth (%)")
+		Headers("Stock", "Amount", priceHeader, "Growth (%)")
 
 	// Build rows
 	for i := range p.Stocks {
@@ -89,7 +96,7 @@ func GetPortfolioTable(infos []*stock.StockInfo) *table.Table {
 		}
 		currentVal := info.Price * float64(s.Amount)
 		growth := (currentVal / s.OriginalCost) - 1
-		currentPriceStr := "$" + fmt.Sprintf("%.2f", info.Price*float64(s.Amount))
+		currentPriceStr := fmt.Sprintf("%.2f", info.ConvertedPrice*float64(s.Amount))
 		growthStr := fmt.Sprintf("%.2f", growth*100) + "%"
 		if growth > 0 {
 			growthStr = "+" + growthStr
@@ -107,19 +114,30 @@ var profileCmd = &cobra.Command{
 	Aliases: []string{"p", "pf"},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		fmt.Println(okStyle.Render(fmt.Sprintf("You have $%.2f USD", p.Usd)))
+		fmt.Println(okStyle.Render(fmt.Sprintf("Displaying prices in %s", p.DisplayCurrency)))
+		exchangeRate := 1.0
+		if p.DisplayCurrency != BaseCurrency {
+			exchangeRate = p.Converter.GetRate("USD", p.DisplayCurrency)
+			fmt.Println(okStyle.Render(fmt.Sprintf("Current exchange rate USD->%s is: %f", p.DisplayCurrency, exchangeRate)))
+		}
+
+		if exchangeRate != 0 {
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s", p.Usd*exchangeRate, p.DisplayCurrency)))
+		} else {
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s", p.Usd, p.DisplayCurrency)))
+		}
 
 		if !p.HasStocks() {
 			fmt.Println(warningStyle.Render("Currently you have no stocks."))
 			return
 		}
 
-		infos := fetchPortfolioInfos()
+		infos := fetchPortfolioInfos(exchangeRate)
 		portfolioGrowth, currentPrice := getPortfolioStatsFromInfos(infos)
 		if portfolioGrowth > 0 {
-			fmt.Println(okStyle.Render(fmt.Sprintf("You have $%.2f in stocks [+%.2f]", currentPrice, portfolioGrowth)))
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s in stocks [+%.2f]", currentPrice*exchangeRate, p.DisplayCurrency, portfolioGrowth)))
 		} else if portfolioGrowth < 0 {
-			fmt.Println(okStyle.Render(fmt.Sprintf("You have $%.2f in stocks %.2f", currentPrice, portfolioGrowth)))
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s in stocks [%.2f]", currentPrice*exchangeRate, p.DisplayCurrency, portfolioGrowth)))
 		}
 
 		fmt.Println(GetPortfolioTable(infos))

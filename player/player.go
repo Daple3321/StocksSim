@@ -8,6 +8,7 @@ import (
 	"path"
 	"slices"
 
+	"github.com/Daple3321/StocksSim/currency"
 	"github.com/Daple3321/StocksSim/stock"
 	"github.com/Daple3321/StocksSim/utils"
 )
@@ -18,16 +19,19 @@ const (
 )
 
 type Player struct {
-	Usd    float64       `json:"usd"`
-	Stocks []stock.Stock `json:"stocks"`
+	Usd             float64       `json:"usd"`
+	DisplayCurrency string        `json:"display_currency"`
+	Stocks          []stock.Stock `json:"stocks"`
 
-	Fetcher StockFetcher `json:"-"`
+	Fetcher   StockFetcher       `json:"-"`
+	Converter currency.Converter `json:"-"`
 }
 
 func NewPlayer() *Player {
 
 	p := Player{
-		Fetcher: &DefaultStockFetcher{},
+		Fetcher:   &DefaultStockFetcher{},
+		Converter: *currency.NewConverter(),
 	}
 
 	err := p.TryLoad()
@@ -49,6 +53,7 @@ func (p *Player) TryLoad() error {
 	if !utils.CheckFileExistence(playerPath) {
 		fmt.Printf("No save file found. Creating new one at: %s\n", playerPath)
 		p.Usd = STARTING_MONEY
+		p.DisplayCurrency = "RUB"
 		return p.Save()
 	}
 
