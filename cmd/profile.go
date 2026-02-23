@@ -34,7 +34,13 @@ func fetchPortfolioInfos(exchangeRate float64) []*stock.StockInfo {
 		i := i
 		ticker := p.Stocks[i].Ticker
 		wg.Go(func() {
-			infos[i], _ = p.Fetcher.Fetch(ticker)
+
+			var fetchErr error
+			infos[i], fetchErr = p.Fetcher.Fetch(ticker)
+			if fetchErr != nil {
+				fmt.Println(errorStyle.Render("Error fetching:", ticker, fetchErr.Error()))
+			}
+
 			if infos[i] != nil && exchangeRate != 0 {
 				infos[i].ConvertedPrice = infos[i].Price * exchangeRate
 			}
@@ -135,9 +141,9 @@ var profileCmd = &cobra.Command{
 		infos := fetchPortfolioInfos(exchangeRate)
 		portfolioGrowth, currentPrice := getPortfolioStatsFromInfos(infos)
 		if portfolioGrowth > 0 {
-			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s in stocks [+%.2f]", currentPrice*exchangeRate, p.DisplayCurrency, portfolioGrowth)))
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s in stocks [+%.2f%%]", currentPrice*exchangeRate, p.DisplayCurrency, portfolioGrowth)))
 		} else if portfolioGrowth < 0 {
-			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s in stocks [%.2f]", currentPrice*exchangeRate, p.DisplayCurrency, portfolioGrowth)))
+			fmt.Println(okStyle.Render(fmt.Sprintf("You have %.2f %s in stocks [%.2f%%]", currentPrice*exchangeRate, p.DisplayCurrency, portfolioGrowth)))
 		}
 
 		fmt.Println(GetPortfolioTable(infos))
