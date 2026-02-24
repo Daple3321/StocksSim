@@ -13,9 +13,9 @@ import (
 
 var mainStyle = lipgloss.NewStyle()
 
-var defaultStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("188")).
-	Inherit(mainStyle)
+// var defaultStyle = lipgloss.NewStyle().
+// 	Foreground(lipgloss.Color("188")).
+// 	Inherit(mainStyle)
 
 var okStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("120")).

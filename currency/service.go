@@ -18,6 +18,12 @@ type DefaultRateService struct {
 	client *http.Client
 }
 
+func NewDefaultRateService(client *http.Client) *DefaultRateService {
+	return &DefaultRateService{
+		client: client,
+	}
+}
+
 func (d *DefaultRateService) getClient() *http.Client {
 	if d.client == nil {
 		d.client = &http.Client{Timeout: 4 * time.Second}
@@ -72,6 +78,7 @@ func (d *DefaultRateService) GetExchangeRate(base string, to string) (float64, e
 type MockRateService struct {
 }
 
+// TODO: Improve mock rate servcie
 func (m *MockRateService) GetExchangeRate(base string, to string) (float64, error) {
 	return 1.5, nil
 }
