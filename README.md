@@ -1,5 +1,7 @@
 # StockSim
 
+[![Go](https://github.com/Daple3321/StocksSim/actions/workflows/go.yml/badge.svg)](https://github.com/Daple3321/StocksSim/actions/workflows/go.yml)
+
 Simulates buying and selling stocks for real prices.
 
 It fetches prices from this API: <https://api-ninjas.com/api/stockprice>.
@@ -68,3 +70,4 @@ And run StocksSim via CMD like this:
 ```powershell
 ./StocksSim
 ```
+
